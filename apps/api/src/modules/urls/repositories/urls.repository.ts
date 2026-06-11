@@ -31,4 +31,18 @@ export class UrlsRepository {
       alias: createdShortUrl.alias,
     };
   }
+
+  async findByCode(code: string): Promise<ShortUrlRecord | null> {
+    const shortUrl = await this.shortUrlModel.findOne({ code }).exec();
+
+    if (!shortUrl) {
+      return null;
+    }
+
+    return {
+      code: shortUrl.code,
+      originalUrl: shortUrl.originalUrl,
+      alias: shortUrl.alias,
+    };
+  }
 }

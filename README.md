@@ -1,13 +1,37 @@
 # Tiny URL Challenge
 
-Monorepo inicial para el challenge de Tiny URL.
+Monorepo para un sistema Tiny URL desarrollado con Node.js, TypeScript, NestJS, MongoDB, Redis y BullMQ.
 
-Estado actual:
-- `apps/api`: backend con NestJS
-- `apps/worker`: worker con NestJS
-- `apps/web`: frontend mínimo con Next.js
-- validación básica de variables de entorno en `api` y `worker`
-- scripts raíz para desarrollo, build y lint
+El objetivo del proyecto es demostrar una arquitectura backend clara, separacion por capas, cache con Redis y procesamiento asincronico de eventos mediante cola.
+
+## Arquitectura
+
+```txt
+apps/
+  api/      API HTTP con NestJS
+  worker/   Procesador asincronico de eventos
+  web/      Frontend minimo con Next.js
+```
+
+Flujo principal:
+
+```txt
+POST /api/v1/urls
+  -> crea short_urls
+  -> inicializa url_stats
+
+GET /:code
+  -> busca en Redis
+  -> si no existe, busca en MongoDB
+  -> repuebla Redis con TTL
+  -> publica evento en BullMQ
+  -> redirecciona
+
+worker
+  -> consume eventos de BullMQ
+  -> guarda click_events
+  -> actualiza url_stats
+```
 
 ## Stack
 
@@ -17,21 +41,12 @@ Estado actual:
 - Next.js
 - MongoDB
 - Redis
-
-## Estructura
-
-```txt
-apps/
-  api/
-  worker/
-  web/
-```
+- BullMQ
+- Mongoose
 
 ## Variables de entorno
 
-El proyecto usa un único `.env` en la raíz.
-
-Variables actuales:
+El proyecto usa un unico `.env` en la raiz.
 
 ```env
 API_PORT=3000
@@ -43,48 +58,88 @@ APP_BASE_URL=http://localhost:3000
 NEXT_PUBLIC_API_URL=http://localhost:3000
 ```
 
-## Instalación
+## Ejecucion
 
-Instalar dependencias por app:
+Levantar backend, worker, MongoDB y Redis:
 
 ```powershell
-cd apps/api
-npm install
-
-cd ../worker
-npm install
-
-cd ../web
-npm install
+npm run docker:up
 ```
 
-## Scripts
-
-Desde la raíz del proyecto:
+Ver logs:
 
 ```powershell
-npm run dev:api
-npm run dev:worker
+npm run docker:logs
+```
+
+Apagar servicios:
+
+```powershell
+npm run docker:down
+```
+
+Levantar frontend aparte:
+
+```powershell
 npm run dev:web
 ```
 
-```powershell
-npm run build:api
-npm run build:worker
-npm run build:web
+## Endpoints
+
+Health check:
+
+```txt
+GET /health
 ```
+
+Crear Tiny URL:
+
+```txt
+POST /api/v1/urls
+```
+
+```json
+{
+  "originalUrl": "https://www.google.com/search?q=nodejs",
+  "alias": "mi-alias"
+}
+```
+
+Resolver Tiny URL:
+
+```txt
+GET /:code
+```
+
+Ejemplo:
+
+```txt
+GET /mi-alias
+```
+
+## Comandos utiles
 
 ```powershell
 npm run lint:api
 npm run lint:worker
-npm run lint:web
+npm --prefix apps/api test -- --runInBand
+npm --prefix apps/worker test -- --runInBand
+npm --prefix apps/api run build
+npm --prefix apps/worker run build
 ```
 
-## Próximo paso
+## Estado actual
 
-Pendiente de implementación:
-- persistencia en MongoDB
-- caché con Redis
-- cola de mensajes
-- endpoints de Tiny URL y estadísticas
-- `docker-compose.yml`
+Implementado:
+
+- Creacion de Tiny URLs.
+- Persistencia en `short_urls`.
+- Estadisticas materializadas en `url_stats`.
+- Resolucion con cache Redis.
+- Publicacion asincronica de eventos con BullMQ.
+- Worker para persistir `click_events` y actualizar `url_stats`.
+
+Pendiente:
+
+- Endpoint publico de estadisticas `GET /api/v1/stats/:code`.
+- Frontend minimo para crear Tiny URLs desde navegador.
