@@ -1,0 +1,20 @@
+{
+  "name": "tiny-url-challenge",
+  "version": "1.0.0",
+  "description": "Tiny URL Challenge - Challenge de Groobyte",
+  "private": true,
+  "scripts": {
+    "dev:api": "npm --prefix apps/api run start:dev",
+    "dev:worker": "npm --prefix apps/worker run start:dev",
+    "dev:web": "npm --prefix apps/web run dev",
+    "build:api": "npm --prefix apps/api run build",
+    "build:worker": "npm --prefix apps/worker run build",
+    "build:web": "npm --prefix apps/web run build",
+    "lint:api": "npm --prefix apps/api run lint",
+    "lint:worker": "npm --prefix apps/worker run lint",
+    "lint:web": "npm --prefix apps/web run lint"
+  },
+  "keywords": [],
+  "author": "Lucas Cabral",
+  "license": "ISC"
+}
