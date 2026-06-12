@@ -1,0 +1,135 @@
+.shell {
+  width: min(1180px, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 2rem 0 3rem;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.brand {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.9rem;
+
+  p {
+    margin: 0;
+    color: var(--color-muted);
+    font-size: 0.9rem;
+    font-weight: 750;
+  }
+
+  h1 {
+    margin: 0.1rem 0 0;
+    color: var(--color-text);
+    font-size: clamp(1.8rem, 4vw, 3rem);
+    line-height: 1;
+  }
+}
+
+.logo {
+  display: inline-flex;
+  width: 52px;
+  height: 52px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(23, 107, 91, 0.18);
+  border-radius: var(--radius-card);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+
+  svg {
+    width: 1.45rem;
+    height: 1.45rem;
+  }
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.9rem;
+  margin-bottom: 1.25rem;
+
+  article {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0.25rem 0.65rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    background: rgba(255, 255, 255, 0.72);
+    padding: 0.85rem;
+
+    svg {
+      grid-row: span 2;
+      width: 1.2rem;
+      height: 1.2rem;
+      color: var(--color-accent);
+    }
+
+    span {
+      color: var(--color-muted);
+      font-size: 0.78rem;
+      font-weight: 750;
+      text-transform: uppercase;
+    }
+
+    strong {
+      min-width: 0;
+      overflow: hidden;
+      color: var(--color-text);
+      font-family: var(--font-mono);
+      font-size: 0.92rem;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.mainColumn,
+.sideColumn {
+  display: grid;
+  gap: 1.25rem;
+}
+
+@media (max-width: 940px) {
+  .topbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .summary,
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .shell {
+    width: min(100% - 1rem, 1180px);
+    padding: 1rem 0 2rem;
+  }
+
+  .brand {
+    align-items: flex-start;
+  }
+
+  .logo {
+    width: 44px;
+    height: 44px;
+  }
+}

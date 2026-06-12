@@ -10,7 +10,7 @@ El objetivo del proyecto es demostrar una arquitectura backend clara, separacion
 apps/
   api/      API HTTP con NestJS
   worker/   Procesador asincronico de eventos
-  web/      Frontend minimo con Next.js
+  web/      Frontend Next.js para probar el flujo
 ```
 
 Flujo principal:
@@ -43,6 +43,7 @@ GET /api/v1/stats/:code
 - TypeScript
 - NestJS
 - Next.js
+- Sass
 - MongoDB
 - Redis
 - BullMQ
@@ -60,6 +61,37 @@ REDIS_HOST=redis
 REDIS_PORT=6379
 APP_BASE_URL=http://localhost:3000
 NEXT_PUBLIC_API_URL=http://localhost:3000
+```
+
+Crear el archivo local desde el ejemplo:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Nota: el frontend local usa `http://localhost:3000` como fallback si no encuentra `NEXT_PUBLIC_API_URL`.
+
+## Instalacion desde cero
+
+Clonar el repositorio:
+
+```powershell
+git clone https://github.com/Lucascabral95/tiny-url-challenge.git
+cd tiny-url-challenge
+```
+
+Instalar dependencias de las aplicaciones:
+
+```powershell
+npm --prefix apps/api install
+npm --prefix apps/worker install
+npm --prefix apps/web install
+```
+
+Crear variables de entorno:
+
+```powershell
+Copy-Item .env.example .env
 ```
 
 ## Ejecucion con Docker
@@ -130,6 +162,67 @@ Levantar frontend aparte:
 npm run dev:web
 ```
 
+El frontend queda disponible en:
+
+```txt
+http://localhost:3001
+```
+
+Desde la pantalla web se puede crear una Tiny URL, copiarla, abrirla y consultar sus estadisticas.
+
+## Probar el flujo completo
+
+1. Levantar backend, worker, MongoDB y Redis:
+
+```powershell
+npm run docker:up
+```
+
+2. Levantar frontend:
+
+```powershell
+npm run dev:web
+```
+
+3. Abrir:
+
+```txt
+http://localhost:3001
+```
+
+4. Desde la pantalla:
+
+- Crear una Tiny URL con una URL original.
+- Copiar o abrir el enlace corto generado.
+- Consultar estadisticas del codigo.
+
+Tambien se puede probar por API:
+
+```powershell
+$body = @{
+  originalUrl = "https://www.google.com/search?q=nodejs"
+  alias = "mi-alias"
+} | ConvertTo-Json
+
+Invoke-RestMethod `
+  -Uri http://localhost:3000/api/v1/urls `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body $body
+```
+
+Resolver la Tiny URL:
+
+```powershell
+Invoke-WebRequest -Uri http://localhost:3000/mi-alias -MaximumRedirection 0
+```
+
+Consultar estadisticas:
+
+```powershell
+Invoke-RestMethod -Uri http://localhost:3000/api/v1/stats/mi-alias
+```
+
 ## Endpoints
 
 Health check:
@@ -184,11 +277,17 @@ Ejemplo de respuesta:
 ```powershell
 npm run lint:api
 npm run lint:worker
-npm --prefix apps/api test -- --runInBand
-npm --prefix apps/worker test -- --runInBand
-npm --prefix apps/api run build
-npm --prefix apps/worker run build
+npm run lint:web
+npm run test:api
+npm run test:worker
+npm run test:backend
+npm run build:api
+npm run build:worker
+npm run build:web
+npm run verify
 ```
+
+`npm run verify` ejecuta lint, tests y build donde corresponde. El frontend no tiene tests automatizados porque el challenge no evalua frontend; se valida con lint y build.
 
 ## Estado actual
 
@@ -201,7 +300,4 @@ Implementado:
 - Publicacion asincronica de eventos con BullMQ.
 - Worker para persistir `click_events` y actualizar `url_stats`.
 - Endpoint de estadisticas `GET /api/v1/stats/:code`.
-
-Pendiente:
-
-- Frontend minimo para crear Tiny URLs desde navegador.
+- Frontend Next.js para crear Tiny URLs, abrir enlaces y consultar estadisticas.

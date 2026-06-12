@@ -1,0 +1,126 @@
+.card {
+  display: grid;
+  gap: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  padding: 1.25rem;
+}
+
+.header,
+.empty {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+
+  h2 {
+    margin: 0.12rem 0 0;
+    overflow-wrap: anywhere;
+    font-size: clamp(1.25rem, 2vw, 1.6rem);
+    line-height: 1.15;
+  }
+}
+
+.empty {
+  justify-content: flex-start;
+}
+
+.emptyIcon {
+  display: inline-flex;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-control);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+
+  svg {
+    width: 1.2rem;
+    height: 1.2rem;
+  }
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--color-primary);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.badge {
+  border: 1px solid rgba(21, 115, 71, 0.2);
+  border-radius: 999px;
+  background: #edf8f2;
+  color: var(--color-success);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  padding: 0.35rem 0.55rem;
+}
+
+.urlBox,
+.detail {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+
+  span {
+    color: var(--color-muted);
+    font-size: 0.8rem;
+    font-weight: 750;
+    text-transform: uppercase;
+  }
+}
+
+.urlBox {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-muted);
+  padding: 0.85rem;
+
+  a {
+    overflow-wrap: anywhere;
+    color: var(--color-primary);
+    font-family: var(--font-mono);
+    font-weight: 700;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.detail {
+  p {
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: var(--color-text);
+    line-height: 1.5;
+  }
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+}
+
+@media (max-width: 640px) {
+  .card {
+    padding: 1rem;
+  }
+
+  .header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}

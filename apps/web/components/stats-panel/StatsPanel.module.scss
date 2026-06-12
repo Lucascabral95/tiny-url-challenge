@@ -1,0 +1,129 @@
+.card {
+  display: grid;
+  gap: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  padding: 1.25rem;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+
+  h2 {
+    margin: 0.12rem 0 0;
+    font-size: 1.3rem;
+    line-height: 1.15;
+  }
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--color-primary);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.badge {
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface-muted);
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  padding: 0.35rem 0.55rem;
+  white-space: nowrap;
+}
+
+.form {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.error {
+  margin: 0;
+  border: 1px solid rgba(180, 35, 24, 0.22);
+  border-radius: var(--radius-control);
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  padding: 0.75rem 0.85rem;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: 0.8fr 1.2fr;
+  gap: 0.8rem;
+}
+
+.metric {
+  display: grid;
+  gap: 0.45rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-muted);
+  padding: 0.85rem;
+
+  span {
+    color: var(--color-muted);
+    font-size: 0.78rem;
+    font-weight: 750;
+    text-transform: uppercase;
+  }
+
+  strong {
+    color: var(--color-text);
+    font-size: 1.5rem;
+    line-height: 1.1;
+  }
+}
+
+.lastClick {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  overflow-wrap: anywhere;
+  font-size: 0.98rem !important;
+  line-height: 1.35 !important;
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+    flex: 0 0 auto;
+    color: var(--color-primary);
+  }
+}
+
+.empty {
+  margin: 0;
+  color: var(--color-muted);
+  line-height: 1.5;
+}
+
+@media (max-width: 720px) {
+  .header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .badge {
+    width: fit-content;
+    white-space: normal;
+  }
+
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .card {
+    padding: 1rem;
+  }
+}
