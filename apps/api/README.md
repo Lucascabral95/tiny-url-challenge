@@ -8,6 +8,7 @@ API HTTP construida con NestJS. Es responsable de crear Tiny URLs, resolver codi
 - Crear documentos en `short_urls`.
 - Inicializar documentos en `url_stats`.
 - Resolver `GET /:code`.
+- Exponer estadisticas con `GET /api/v1/stats/:code`.
 - Consultar Redis antes de MongoDB.
 - Repoblar Redis con TTL cuando hay cache miss.
 - Publicar eventos de click en la cola `click-events`.
@@ -21,6 +22,7 @@ src/
     queue/
   modules/
     click-events/
+    stats/
     urls/
       controllers/
       dto/
@@ -60,6 +62,22 @@ Resolver Tiny URL:
 
 ```txt
 GET /:code
+```
+
+Consultar estadisticas:
+
+```txt
+GET /api/v1/stats/:code
+```
+
+Respuesta:
+
+```json
+{
+  "code": "mi-alias",
+  "totalClicks": 3,
+  "lastClick": "2026-06-11T23:34:04.308Z"
+}
 ```
 
 Health check:

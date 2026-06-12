@@ -31,6 +31,10 @@ worker
   -> consume eventos de BullMQ
   -> guarda click_events
   -> actualiza url_stats
+
+GET /api/v1/stats/:code
+  -> lee url_stats
+  -> devuelve totalClicks y lastClick
 ```
 
 ## Stack
@@ -58,12 +62,39 @@ APP_BASE_URL=http://localhost:3000
 NEXT_PUBLIC_API_URL=http://localhost:3000
 ```
 
-## Ejecucion
+## Ejecucion con Docker
+
+Requisitos:
+
+- Docker Desktop levantado.
+- Node.js instalado para ejecutar los scripts npm.
+- Archivo `.env` creado en la raiz del proyecto.
+
+Si no existe `.env`, usar `.env.example` como base.
 
 Levantar backend, worker, MongoDB y Redis:
 
 ```powershell
 npm run docker:up
+```
+
+Este comando ejecuta:
+
+```powershell
+docker compose up --build -d
+```
+
+Servicios levantados:
+
+- `api`: NestJS API en `http://localhost:3000`
+- `worker`: consumidor asincronico de eventos
+- `mongo`: base de datos en puerto `27017`
+- `redis`: cache y backend de BullMQ en puerto `6379`
+
+Ver estado de los contenedores:
+
+```powershell
+docker compose ps
 ```
 
 Ver logs:
@@ -76,6 +107,21 @@ Apagar servicios:
 
 ```powershell
 npm run docker:down
+```
+
+Probar que la API responde:
+
+```powershell
+Invoke-RestMethod -Uri http://localhost:3000/health
+```
+
+Respuesta esperada:
+
+```json
+{
+  "status": "healthy",
+  "message": "Health is ok"
+}
 ```
 
 Levantar frontend aparte:
@@ -117,6 +163,22 @@ Ejemplo:
 GET /mi-alias
 ```
 
+Consultar estadisticas:
+
+```txt
+GET /api/v1/stats/:code
+```
+
+Ejemplo de respuesta:
+
+```json
+{
+  "code": "mi-alias",
+  "totalClicks": 3,
+  "lastClick": "2026-06-11T23:34:04.308Z"
+}
+```
+
 ## Comandos utiles
 
 ```powershell
@@ -138,8 +200,8 @@ Implementado:
 - Resolucion con cache Redis.
 - Publicacion asincronica de eventos con BullMQ.
 - Worker para persistir `click_events` y actualizar `url_stats`.
+- Endpoint de estadisticas `GET /api/v1/stats/:code`.
 
 Pendiente:
 
-- Endpoint publico de estadisticas `GET /api/v1/stats/:code`.
 - Frontend minimo para crear Tiny URLs desde navegador.
