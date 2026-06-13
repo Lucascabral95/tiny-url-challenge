@@ -41,6 +41,13 @@ RedirectController
   -> ClickEventsProducer
 ```
 
+## Decisiones de diseno
+
+- Redis se consulta antes que MongoDB para reducir latencia en la resolucion de URLs frecuentes.
+- MongoDB conserva la fuente de verdad en `short_urls`; el cache puede expirar sin perder datos.
+- La API publica eventos en BullMQ y no espera a que se persistan las estadisticas para redireccionar.
+- Los repositorios encapsulan Mongoose para mantener controllers y services enfocados en HTTP y reglas de negocio.
+
 ## Endpoints
 
 Crear Tiny URL:
@@ -86,6 +93,29 @@ Health check:
 GET /health
 ```
 
+## Swagger
+
+La API expone documentacion OpenAPI en:
+
+```txt
+http://localhost:3000/api/docs
+```
+
+El JSON de OpenAPI esta disponible en:
+
+```txt
+http://localhost:3000/api/docs-json
+```
+
+Endpoints documentados:
+
+- `GET /health`
+- `POST /api/v1/urls`
+- `GET /:code`
+- `GET /api/v1/stats/:code`
+
+Swagger aplica solo a la API HTTP. El worker no expone endpoints publicos; consume BullMQ y se documenta en `apps/worker/README.md`.
+
 ## Redis
 
 Redis se usa como cache de resolucion.
@@ -129,6 +159,6 @@ Desde la raiz:
 
 ```powershell
 npm run lint:api
-npm --prefix apps/api test -- --runInBand
-npm --prefix apps/api run build
+npm run test:api
+npm run build:api
 ```

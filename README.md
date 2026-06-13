@@ -49,6 +49,25 @@ GET /api/v1/stats/:code
 - BullMQ
 - Mongoose
 
+## Decisiones tecnicas
+
+- **BullMQ**: se usa porque integra bien con Node.js/NestJS, corre sobre Redis y permite reintentos, backoff y procesamiento asincronico sin bloquear la request de redireccion.
+- **Redis como cache**: acelera la resolucion de `GET /:code`. MongoDB sigue siendo la fuente de verdad, y Redis se repuebla con TTL cuando hay cache miss.
+- **`url_stats` materializado**: evita calcular estadisticas recorriendo todos los eventos en cada consulta. El worker mantiene este documento actualizado por cada click.
+- **Eventos no bloqueantes**: si falla la publicacion del evento, la API redirecciona igual. La experiencia del usuario no depende del sistema analitico.
+
+## Arquitectura de datos
+
+- `short_urls`: guarda el codigo corto, URL original, alias opcional y timestamps.
+- `click_events`: guarda cada acceso procesado por el worker con codigo, fecha, IP y User-Agent cuando estan disponibles.
+- `url_stats`: guarda una vista materializada por codigo con `totalClicks` y `lastClick`.
+
+## Alcance y trade-offs
+
+- No se implementa listado de URLs porque no forma parte del challenge y abriria decisiones de paginacion, filtros y exposicion de datos.
+- No se implementa autenticacion porque el objetivo es evaluar arquitectura backend, cache, cola y persistencia asincronica.
+- No se agregan tests automatizados del frontend porque el PDF indica que no sera evaluado; el frontend se valida con lint, build y prueba manual end-to-end.
+
 ## Variables de entorno
 
 El proyecto usa un unico `.env` en la raiz.
@@ -169,6 +188,31 @@ http://localhost:3001
 ```
 
 Desde la pantalla web se puede crear una Tiny URL, copiarla, abrirla y consultar sus estadisticas.
+
+## Documentacion Swagger
+
+La API expone documentacion OpenAPI con Swagger UI.
+
+Con los servicios levantados, abrir:
+
+```txt
+http://localhost:3000/api/docs
+```
+
+El documento JSON esta disponible en:
+
+```txt
+http://localhost:3000/api/docs-json
+```
+
+Swagger documenta los endpoints HTTP de `apps/api`:
+
+- `GET /health`
+- `POST /api/v1/urls`
+- `GET /:code`
+- `GET /api/v1/stats/:code`
+
+El worker no tiene Swagger porque no expone endpoints publicos; consume eventos de BullMQ y se documenta en su README.
 
 ## Probar el flujo completo
 

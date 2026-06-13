@@ -31,6 +31,13 @@ ClickEventsProcessor
   -> UrlStatsRepository
 ```
 
+## Decisiones de diseno
+
+- El worker concentra el procesamiento asincronico para que la API mantenga baja latencia al redireccionar.
+- `click_events` conserva el historial auditable de accesos.
+- `url_stats` se actualiza como vista materializada para responder estadisticas sin agregaciones costosas.
+- Si MongoDB falla, el job falla y BullMQ puede reintentarlo; no se descarta silenciosamente el evento.
+
 ## Cola
 
 Queue:
@@ -73,6 +80,6 @@ Desde la raiz:
 
 ```powershell
 npm run lint:worker
-npm --prefix apps/worker test -- --runInBand
-npm --prefix apps/worker run build
+npm run test:worker
+npm run build:worker
 ```
