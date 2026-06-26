@@ -6,6 +6,7 @@ describe('applyApiPrefixToSwaggerPaths', () => {
     const document = {
       paths: {
         '/health': {},
+        '/ready': {},
         '/urls': {},
         '/{code}': {},
         '/stats/{code}': {},
@@ -16,6 +17,7 @@ describe('applyApiPrefixToSwaggerPaths', () => {
 
     expect(Object.keys(result.paths)).toEqual([
       '/health',
+      '/ready',
       '/api/v1/urls',
       '/{code}',
       '/api/v1/stats/{code}',

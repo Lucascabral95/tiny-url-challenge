@@ -60,6 +60,7 @@ GET /api/v1/stats/:code
 - **Codigos cortos resilientes**: los codigos generados se verifican contra MongoDB y se reintentan ante colisiones. El indice unico sigue siendo la garantia final frente a condiciones de carrera.
 - **Rate limiting**: `POST /api/v1/urls` y `GET /:code` tienen limites por IP para reducir abuso y proteger MongoDB/Redis ante trafico excesivo.
 - **Validacion anti-SSRF**: la URL original debe ser publica y usar `http/https`. Se bloquean hosts locales, nombres internos y rangos privados o link-local.
+- **Readiness separado de health**: `/health` indica que el proceso vive; `/ready` valida MongoDB para saber si la API puede recibir trafico. Redis cache no bloquea readiness porque puede degradar a MongoDB.
 - **Graceful shutdown**: API y worker escuchan señales de apagado para cerrar recursos. El worker detiene el polling del outbox y espera el drenado activo antes de finalizar.
 
 ## Arquitectura de datos
@@ -182,6 +183,24 @@ Respuesta esperada:
 }
 ```
 
+Probar que la API esta lista para recibir trafico:
+
+```powershell
+Invoke-RestMethod -Uri http://localhost:3000/ready
+```
+
+Respuesta esperada:
+
+```json
+{
+  "status": "ready",
+  "message": "API is ready",
+  "checks": {
+    "mongodb": "up"
+  }
+}
+```
+
 Levantar frontend aparte:
 
 ```powershell
@@ -215,6 +234,7 @@ http://localhost:3000/api/docs-json
 Swagger documenta los endpoints HTTP de `apps/api`:
 
 - `GET /health`
+- `GET /ready`
 - `POST /api/v1/urls`
 - `GET /:code`
 - `GET /api/v1/stats/:code`
@@ -282,6 +302,12 @@ Health check:
 
 ```txt
 GET /health
+```
+
+Readiness check:
+
+```txt
+GET /ready
 ```
 
 Crear Tiny URL:
@@ -353,6 +379,7 @@ Implementado:
 - Circuit breaker para degradar a MongoDB si Redis cache falla.
 - Rate limiting por IP en creacion y redireccion de Tiny URLs.
 - Validacion anti-SSRF para bloquear URLs internas o privadas.
+- Readiness endpoint `GET /ready` para validar MongoDB.
 - Graceful shutdown para API, worker y polling del outbox.
 - Publicacion asincronica de eventos con BullMQ.
 - Outbox persistente con TTL para procesados y estado `dead` para eventos agotados.
