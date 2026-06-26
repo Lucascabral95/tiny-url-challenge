@@ -1,12 +1,18 @@
 import { IsOptional, IsString, IsUrl, Length, Matches } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsPublicUrl } from '../../../common/validators/is-public-url.decorator';
 
 export class CreateShortUrlDto {
   @ApiProperty({
     example: 'https://www.google.com/search?q=nodejs',
-    description: 'URL original que sera redireccionada por la Tiny URL.',
+    description:
+      'URL publica http/https que sera redireccionada por la Tiny URL. No se permiten hosts locales o redes privadas.',
   })
-  @IsUrl({ require_protocol: true })
+  @IsUrl(
+    { protocols: ['http', 'https'], require_protocol: true },
+    { message: 'originalUrl must be a valid http or https URL' },
+  )
+  @IsPublicUrl()
   originalUrl!: string;
 
   @ApiPropertyOptional({

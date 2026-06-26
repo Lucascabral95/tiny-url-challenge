@@ -59,6 +59,7 @@ GET /api/v1/stats/:code
 - **Outbox de eventos**: si falla la publicacion en BullMQ, la API persiste el click en `click_event_outbox`. El worker lo recupera luego de forma idempotente usando `eventId`; si agota reintentos, queda en estado `dead` para inspeccion. Los eventos `processed` se limpian automaticamente por TTL.
 - **Codigos cortos resilientes**: los codigos generados se verifican contra MongoDB y se reintentan ante colisiones. El indice unico sigue siendo la garantia final frente a condiciones de carrera.
 - **Rate limiting**: `POST /api/v1/urls` y `GET /:code` tienen limites por IP para reducir abuso y proteger MongoDB/Redis ante trafico excesivo.
+- **Validacion anti-SSRF**: la URL original debe ser publica y usar `http/https`. Se bloquean hosts locales, nombres internos y rangos privados o link-local.
 - **Graceful shutdown**: API y worker escuchan señales de apagado para cerrar recursos. El worker detiene el polling del outbox y espera el drenado activo antes de finalizar.
 
 ## Arquitectura de datos
@@ -351,6 +352,7 @@ Implementado:
 - Resolucion con cache Redis.
 - Circuit breaker para degradar a MongoDB si Redis cache falla.
 - Rate limiting por IP en creacion y redireccion de Tiny URLs.
+- Validacion anti-SSRF para bloquear URLs internas o privadas.
 - Graceful shutdown para API, worker y polling del outbox.
 - Publicacion asincronica de eventos con BullMQ.
 - Outbox persistente con TTL para procesados y estado `dead` para eventos agotados.
