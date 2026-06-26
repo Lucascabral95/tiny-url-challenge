@@ -10,6 +10,9 @@ export type ClickEventDocument = HydratedDocument<ClickEvent>;
 })
 export class ClickEvent {
   @Prop({ required: true, trim: true })
+  eventId!: string;
+
+  @Prop({ required: true, trim: true })
   code!: string;
 
   @Prop({ required: true })
@@ -24,6 +27,13 @@ export class ClickEvent {
 
 export const ClickEventSchema = SchemaFactory.createForClass(ClickEvent);
 
+ClickEventSchema.index(
+  { eventId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { eventId: { $type: 'string' } },
+  },
+);
 ClickEventSchema.index({ code: 1 });
 ClickEventSchema.index({ clickedAt: -1 });
 ClickEventSchema.index({ code: 1, clickedAt: -1 });

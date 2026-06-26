@@ -1,6 +1,7 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ClickEventsProducer } from '../../click-events/producers/click-events.producer';
+import { ClickEventsOutboxRepository } from '../../click-events/repositories/click-events-outbox.repository';
 import { CreateShortUrlDto } from '../dto/create-short-url.dto';
 import { UrlStatsRepository } from '../repositories/url-stats.repository';
 import { UrlsRepository } from '../repositories/urls.repository';
@@ -25,6 +26,9 @@ describe('UrlsService', () => {
   let clickEventsProducer: jest.Mocked<
     Pick<ClickEventsProducer, 'publishTinyUrlClick'>
   >;
+  let clickEventsOutboxRepository: jest.Mocked<
+    Pick<ClickEventsOutboxRepository, 'createPending'>
+  >;
 
   beforeEach(async () => {
     urlsRepository = {
@@ -44,6 +48,9 @@ describe('UrlsService', () => {
     };
     clickEventsProducer = {
       publishTinyUrlClick: jest.fn(),
+    };
+    clickEventsOutboxRepository = {
+      createPending: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -68,6 +75,10 @@ describe('UrlsService', () => {
         {
           provide: ClickEventsProducer,
           useValue: clickEventsProducer,
+        },
+        {
+          provide: ClickEventsOutboxRepository,
+          useValue: clickEventsOutboxRepository,
         },
       ],
     }).compile();
@@ -241,6 +252,7 @@ describe('UrlsService', () => {
     expect(urlCacheService.setOriginalUrl).not.toHaveBeenCalled();
     expect(clickEventsProducer.publishTinyUrlClick).toHaveBeenCalledWith(
       expect.objectContaining({
+        eventId: expect.any(String) as string,
         code: 'AbC12345',
         ip: '127.0.0.1',
         userAgent: 'jest',
@@ -269,6 +281,7 @@ describe('UrlsService', () => {
     );
     expect(clickEventsProducer.publishTinyUrlClick).toHaveBeenCalledWith(
       expect.objectContaining({
+        eventId: expect.any(String) as string,
         code: 'AbC12345',
         ip: '127.0.0.1',
         userAgent: 'jest',
@@ -298,6 +311,31 @@ describe('UrlsService', () => {
 
     await expect(urlsService.resolveShortUrl('AbC12345', {})).resolves.toBe(
       'https://www.google.com/search?q=nodejs',
+    );
+  });
+
+  it('should persist click event in outbox when publishing fails', async () => {
+    urlCacheService.getOriginalUrl.mockResolvedValue(
+      'https://www.google.com/search?q=nodejs',
+    );
+    clickEventsProducer.publishTinyUrlClick.mockRejectedValue(
+      new Error('queue unavailable'),
+    );
+
+    await expect(
+      urlsService.resolveShortUrl('AbC12345', {
+        ip: '127.0.0.1',
+        userAgent: 'jest',
+      }),
+    ).resolves.toBe('https://www.google.com/search?q=nodejs');
+
+    expect(clickEventsOutboxRepository.createPending).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventId: expect.any(String) as string,
+        code: 'AbC12345',
+        ip: '127.0.0.1',
+        userAgent: 'jest',
+      }),
     );
   });
 });

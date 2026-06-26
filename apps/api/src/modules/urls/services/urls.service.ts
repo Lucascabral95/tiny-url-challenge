@@ -4,8 +4,10 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { envs } from '../../../config/env.schema';
 import { ClickEventsProducer } from '../../click-events/producers/click-events.producer';
+import { ClickEventsOutboxRepository } from '../../click-events/repositories/click-events-outbox.repository';
 import { MAX_SHORT_CODE_GENERATION_ATTEMPTS } from '../urls.constants';
 import { CreateShortUrlDto } from '../dto/create-short-url.dto';
 import { UrlStatsRepository } from '../repositories/url-stats.repository';
@@ -34,6 +36,7 @@ export class UrlsService {
     private readonly shortCodeGenerator: ShortCodeGeneratorService,
     private readonly urlCacheService: UrlCacheService,
     private readonly clickEventsProducer: ClickEventsProducer,
+    private readonly clickEventsOutboxRepository: ClickEventsOutboxRepository,
   ) {}
 
   async createShortUrl(
@@ -81,17 +84,28 @@ export class UrlsService {
     code: string,
     metadata: ResolveShortUrlMetadata,
   ): Promise<void> {
+    const payload = {
+      eventId: randomUUID(),
+      code,
+      clickedAt: new Date().toISOString(),
+      ip: metadata.ip,
+      userAgent: metadata.userAgent,
+    };
+
     try {
-      await this.clickEventsProducer.publishTinyUrlClick({
-        code,
-        clickedAt: new Date().toISOString(),
-        ip: metadata.ip,
-        userAgent: metadata.userAgent,
-      });
+      await this.clickEventsProducer.publishTinyUrlClick(payload);
     } catch (error) {
       this.logger.warn(
         `Failed to publish click event for ${code}: ${this.formatError(error)}`,
       );
+
+      try {
+        await this.clickEventsOutboxRepository.createPending(payload);
+      } catch (outboxError) {
+        this.logger.error(
+          `Failed to persist click event outbox for ${code}: ${this.formatError(outboxError)}`,
+        );
+      }
     }
   }
 

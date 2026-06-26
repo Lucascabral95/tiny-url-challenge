@@ -4,6 +4,7 @@ import { Model } from 'mongoose';
 import { ClickEvent, ClickEventDocument } from '../schemas/click-event.schema';
 
 export interface CreateClickEventRecord {
+  eventId: string;
   code: string;
   clickedAt: Date;
   ip?: string;
@@ -17,7 +18,24 @@ export class ClickEventsRepository {
     private readonly clickEventModel: Model<ClickEventDocument>,
   ) {}
 
-  async create(data: CreateClickEventRecord): Promise<void> {
-    await this.clickEventModel.create(data);
+  async create(data: CreateClickEventRecord): Promise<boolean> {
+    try {
+      await this.clickEventModel.create(data);
+      return true;
+    } catch (error) {
+      if (this.isDuplicateKeyError(error)) {
+        return false;
+      }
+
+      throw error;
+    }
+  }
+
+  private isDuplicateKeyError(error: unknown): boolean {
+    if (typeof error !== 'object' || error === null) {
+      return false;
+    }
+
+    return 'code' in error && error.code === 11000;
   }
 }

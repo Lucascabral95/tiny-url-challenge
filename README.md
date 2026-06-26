@@ -24,11 +24,12 @@ GET /:code
   -> busca en Redis
   -> si no existe, busca en MongoDB
   -> repuebla Redis con TTL
-  -> publica evento en BullMQ
+  -> publica evento en BullMQ o lo guarda en outbox si falla
   -> redirecciona
 
 worker
   -> consume eventos de BullMQ
+  -> procesa eventos pendientes del outbox
   -> guarda click_events
   -> actualiza url_stats
 
@@ -53,13 +54,16 @@ GET /api/v1/stats/:code
 
 - **BullMQ**: se usa porque integra bien con Node.js/NestJS, corre sobre Redis y permite reintentos, backoff y procesamiento asincronico sin bloquear la request de redireccion.
 - **Redis como cache**: acelera la resolucion de `GET /:code`. MongoDB sigue siendo la fuente de verdad, y Redis se repuebla con TTL cuando hay cache miss.
+- **Fallback de Redis**: si Redis cache falla, la API abre un circuit breaker temporal y resuelve desde MongoDB para no degradar toda la aplicacion por una dependencia de cache.
 - **`url_stats` materializado**: evita calcular estadisticas recorriendo todos los eventos en cada consulta. El worker mantiene este documento actualizado por cada click.
-- **Eventos no bloqueantes**: si falla la publicacion del evento, la API redirecciona igual. La experiencia del usuario no depende del sistema analitico.
+- **Outbox de eventos**: si falla la publicacion en BullMQ, la API persiste el click en `click_event_outbox`. El worker lo recupera luego de forma idempotente usando `eventId`.
+- **Codigos cortos resilientes**: los codigos generados se verifican contra MongoDB y se reintentan ante colisiones. El indice unico sigue siendo la garantia final frente a condiciones de carrera.
 
 ## Arquitectura de datos
 
 - `short_urls`: guarda el codigo corto, URL original, alias opcional y timestamps.
 - `click_events`: guarda cada acceso procesado por el worker con codigo, fecha, IP y User-Agent cuando estan disponibles.
+- `click_event_outbox`: guarda clicks pendientes cuando BullMQ no esta disponible o falla la publicacion del evento.
 - `url_stats`: guarda una vista materializada por codigo con `totalClicks` y `lastClick`.
 
 ## Alcance y trade-offs
@@ -341,7 +345,9 @@ Implementado:
 - Persistencia en `short_urls`.
 - Estadisticas materializadas en `url_stats`.
 - Resolucion con cache Redis.
+- Circuit breaker para degradar a MongoDB si Redis cache falla.
 - Publicacion asincronica de eventos con BullMQ.
+- Outbox persistente para no perder clicks si falla la publicacion en BullMQ.
 - Worker para persistir `click_events` y actualizar `url_stats`.
 - Endpoint de estadisticas `GET /api/v1/stats/:code`.
 - Frontend Next.js para crear Tiny URLs, abrir enlaces y consultar estadisticas.
