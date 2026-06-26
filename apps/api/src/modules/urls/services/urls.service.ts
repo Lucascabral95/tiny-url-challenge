@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { envs } from '../../../config/env.schema';
 import { ClickEventsProducer } from '../../click-events/producers/click-events.producer';
+import { MAX_SHORT_CODE_GENERATION_ATTEMPTS } from '../urls.constants';
 import { CreateShortUrlDto } from '../dto/create-short-url.dto';
 import { UrlStatsRepository } from '../repositories/url-stats.repository';
 import { UrlsRepository } from '../repositories/urls.repository';
@@ -40,29 +41,17 @@ export class UrlsService {
   ): Promise<CreateShortUrlResponse> {
     const originalUrl = createShortUrlDto.originalUrl.trim();
     const alias = createShortUrlDto.alias?.trim();
-    const code = alias ?? this.shortCodeGenerator.generate();
+    const shortUrl = alias
+      ? await this.createShortUrlWithAlias(originalUrl, alias)
+      : await this.createShortUrlWithGeneratedCode(originalUrl);
 
-    try {
-      const shortUrl = await this.urlsRepository.create({
-        code,
-        originalUrl,
-        alias,
-      });
+    await this.urlStatsRepository.createInitialStats(shortUrl.code);
 
-      await this.urlStatsRepository.createInitialStats(shortUrl.code);
-
-      return {
-        code: shortUrl.code,
-        originalUrl: shortUrl.originalUrl,
-        shortUrl: `${envs.appBaseUrl}/${shortUrl.code}`,
-      };
-    } catch (error) {
-      if (this.isDuplicateKeyError(error)) {
-        throw new ConflictException('Tiny URL code or alias already exists');
-      }
-
-      throw error;
-    }
+    return {
+      code: shortUrl.code,
+      originalUrl: shortUrl.originalUrl,
+      shortUrl: `${envs.appBaseUrl}/${shortUrl.code}`,
+    };
   }
 
   async resolveShortUrl(
@@ -104,6 +93,64 @@ export class UrlsService {
         `Failed to publish click event for ${code}: ${this.formatError(error)}`,
       );
     }
+  }
+
+  private async createShortUrlWithAlias(originalUrl: string, alias: string) {
+    try {
+      return await this.urlsRepository.create({
+        code: alias,
+        originalUrl,
+        alias,
+      });
+    } catch (error) {
+      if (this.isDuplicateKeyError(error)) {
+        throw new ConflictException('Tiny URL code or alias already exists');
+      }
+
+      throw error;
+    }
+  }
+
+  private async createShortUrlWithGeneratedCode(originalUrl: string) {
+    for (
+      let attempt = 0;
+      attempt < MAX_SHORT_CODE_GENERATION_ATTEMPTS;
+      attempt += 1
+    ) {
+      const code = this.shortCodeGenerator.generate();
+      const codeAlreadyExists = await this.urlsRepository.existsByCode(code);
+
+      if (codeAlreadyExists) {
+        this.logger.warn(
+          `Short code collision detected before insert for ${code} on attempt ${attempt + 1}/${MAX_SHORT_CODE_GENERATION_ATTEMPTS}`,
+        );
+        continue;
+      }
+
+      try {
+        return await this.urlsRepository.create({
+          code,
+          originalUrl,
+        });
+      } catch (error) {
+        if (this.isDuplicateKeyError(error)) {
+          this.logger.warn(
+            `Short code collision detected during insert for ${code} on attempt ${attempt + 1}/${MAX_SHORT_CODE_GENERATION_ATTEMPTS}`,
+          );
+          continue;
+        }
+
+        throw error;
+      }
+    }
+
+    this.logger.error(
+      `Failed to generate a unique Tiny URL code after ${MAX_SHORT_CODE_GENERATION_ATTEMPTS} attempts`,
+    );
+
+    throw new ConflictException(
+      'Could not generate a unique Tiny URL code after multiple attempts',
+    );
   }
 
   private isDuplicateKeyError(error: unknown): boolean {

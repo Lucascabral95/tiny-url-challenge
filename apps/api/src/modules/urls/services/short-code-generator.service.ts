@@ -1,9 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { customAlphabet } from 'nanoid';
+import { SHORT_CODE_ALPHABET, SHORT_CODE_LENGTH } from '../urls.constants';
 
-const shortCodeAlphabet =
-  '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
-const generateShortCode = customAlphabet(shortCodeAlphabet, 8);
+const generateShortCode = customAlphabet(
+  SHORT_CODE_ALPHABET,
+  SHORT_CODE_LENGTH,
+);
 
 @Injectable()
 export class ShortCodeGeneratorService {

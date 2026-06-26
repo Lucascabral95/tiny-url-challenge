@@ -11,7 +11,7 @@ import { UrlsService } from './urls.service';
 describe('UrlsService', () => {
   let urlsService: UrlsService;
   let urlsRepository: jest.Mocked<
-    Pick<UrlsRepository, 'create' | 'findByCode'>
+    Pick<UrlsRepository, 'create' | 'findByCode' | 'existsByCode'>
   >;
   let urlStatsRepository: jest.Mocked<
     Pick<UrlStatsRepository, 'createInitialStats'>
@@ -30,6 +30,7 @@ describe('UrlsService', () => {
     urlsRepository = {
       create: jest.fn(),
       findByCode: jest.fn(),
+      existsByCode: jest.fn(),
     };
     urlStatsRepository = {
       createInitialStats: jest.fn(),
@@ -101,6 +102,7 @@ describe('UrlsService', () => {
     expect(urlStatsRepository.createInitialStats).toHaveBeenCalledWith(
       'mi-alias',
     );
+    expect(urlsRepository.existsByCode).not.toHaveBeenCalled();
   });
 
   it('should create a Tiny URL with a generated code', async () => {
@@ -109,6 +111,7 @@ describe('UrlsService', () => {
     };
 
     shortCodeGenerator.generate.mockReturnValue('AbC12345');
+    urlsRepository.existsByCode.mockResolvedValue(false);
     urlsRepository.create.mockResolvedValue({
       code: 'AbC12345',
       originalUrl: createShortUrlDto.originalUrl,
@@ -124,8 +127,8 @@ describe('UrlsService', () => {
     expect(urlsRepository.create).toHaveBeenCalledWith({
       code: 'AbC12345',
       originalUrl: createShortUrlDto.originalUrl,
-      alias: undefined,
     });
+    expect(urlsRepository.existsByCode).toHaveBeenCalledWith('AbC12345');
     expect(urlStatsRepository.createInitialStats).toHaveBeenCalledWith(
       'AbC12345',
     );
@@ -142,6 +145,83 @@ describe('UrlsService', () => {
     await expect(
       urlsService.createShortUrl(createShortUrlDto),
     ).rejects.toBeInstanceOf(ConflictException);
+    expect(urlStatsRepository.createInitialStats).not.toHaveBeenCalled();
+  });
+
+  it('should retry generated codes when one already exists', async () => {
+    const createShortUrlDto: CreateShortUrlDto = {
+      originalUrl: 'https://www.google.com/search?q=nodejs',
+    };
+
+    shortCodeGenerator.generate
+      .mockReturnValueOnce('AbC12345')
+      .mockReturnValueOnce('XyZ98765');
+    urlsRepository.existsByCode
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(false);
+    urlsRepository.create.mockResolvedValue({
+      code: 'XyZ98765',
+      originalUrl: createShortUrlDto.originalUrl,
+    });
+
+    await expect(
+      urlsService.createShortUrl(createShortUrlDto),
+    ).resolves.toEqual({
+      code: 'XyZ98765',
+      originalUrl: createShortUrlDto.originalUrl,
+      shortUrl: 'http://localhost:3000/XyZ98765',
+    });
+
+    expect(urlsRepository.create).toHaveBeenCalledTimes(1);
+    expect(urlsRepository.create).toHaveBeenCalledWith({
+      code: 'XyZ98765',
+      originalUrl: createShortUrlDto.originalUrl,
+    });
+  });
+
+  it('should retry when a generated code collides during insert', async () => {
+    const createShortUrlDto: CreateShortUrlDto = {
+      originalUrl: 'https://www.google.com/search?q=nodejs',
+    };
+
+    shortCodeGenerator.generate
+      .mockReturnValueOnce('AbC12345')
+      .mockReturnValueOnce('XyZ98765');
+    urlsRepository.existsByCode
+      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce(false);
+    urlsRepository.create
+      .mockRejectedValueOnce({ code: 11000 })
+      .mockResolvedValueOnce({
+        code: 'XyZ98765',
+        originalUrl: createShortUrlDto.originalUrl,
+      });
+
+    await expect(
+      urlsService.createShortUrl(createShortUrlDto),
+    ).resolves.toEqual({
+      code: 'XyZ98765',
+      originalUrl: createShortUrlDto.originalUrl,
+      shortUrl: 'http://localhost:3000/XyZ98765',
+    });
+
+    expect(urlsRepository.create).toHaveBeenCalledTimes(2);
+  });
+
+  it('should fail when it cannot generate a unique code after all retries', async () => {
+    const createShortUrlDto: CreateShortUrlDto = {
+      originalUrl: 'https://www.google.com/search?q=nodejs',
+    };
+
+    shortCodeGenerator.generate.mockReturnValue('AbC12345');
+    urlsRepository.existsByCode.mockResolvedValue(true);
+
+    await expect(
+      urlsService.createShortUrl(createShortUrlDto),
+    ).rejects.toBeInstanceOf(ConflictException);
+
+    expect(shortCodeGenerator.generate).toHaveBeenCalledTimes(5);
+    expect(urlsRepository.create).not.toHaveBeenCalled();
     expect(urlStatsRepository.createInitialStats).not.toHaveBeenCalled();
   });
 

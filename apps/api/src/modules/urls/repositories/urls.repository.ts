@@ -45,4 +45,10 @@ export class UrlsRepository {
       alias: shortUrl.alias,
     };
   }
+
+  async existsByCode(code: string): Promise<boolean> {
+    const shortUrl = await this.shortUrlModel.exists({ code }).exec();
+
+    return shortUrl !== null;
+  }
 }
