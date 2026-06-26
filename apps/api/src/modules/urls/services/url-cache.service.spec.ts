@@ -7,6 +7,7 @@ describe('UrlCacheService', () => {
   let redisClient: {
     get: jest.Mock;
     set: jest.Mock;
+    quit: jest.Mock;
     disconnect: jest.Mock;
     on: jest.Mock;
   };
@@ -16,6 +17,7 @@ describe('UrlCacheService', () => {
     redisClient = {
       get: jest.fn(),
       set: jest.fn(),
+      quit: jest.fn().mockResolvedValue('OK'),
       disconnect: jest.fn(),
       on: jest.fn(),
     };
@@ -74,5 +76,20 @@ describe('UrlCacheService', () => {
     await service.setOriginalUrl('AbC12345', 'https://example.com');
 
     expect(redisClient.set).not.toHaveBeenCalled();
+  });
+
+  it('should close Redis gracefully on module destroy', async () => {
+    await service.onModuleDestroy();
+
+    expect(redisClient.quit).toHaveBeenCalled();
+    expect(redisClient.disconnect).not.toHaveBeenCalled();
+  });
+
+  it('should force disconnect when Redis graceful shutdown fails', async () => {
+    redisClient.quit.mockRejectedValue(new Error('quit failed'));
+
+    await service.onModuleDestroy();
+
+    expect(redisClient.disconnect).toHaveBeenCalled();
   });
 });

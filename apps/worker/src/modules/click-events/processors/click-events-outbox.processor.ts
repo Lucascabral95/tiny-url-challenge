@@ -17,7 +17,8 @@ export class ClickEventsOutboxProcessor
 {
   private readonly logger = new Logger(ClickEventsOutboxProcessor.name);
   private interval?: ReturnType<typeof setInterval>;
-  private isDraining = false;
+  private activeDrain?: Promise<void>;
+  private isShuttingDown = false;
 
   constructor(
     private readonly clickEventsOutboxRepository: ClickEventsOutboxRepository,
@@ -31,29 +32,41 @@ export class ClickEventsOutboxProcessor
     }, CLICK_EVENT_OUTBOX_POLL_INTERVAL_MS);
   }
 
-  onModuleDestroy(): void {
+  async onModuleDestroy(): Promise<void> {
+    this.isShuttingDown = true;
+
     if (this.interval) {
       clearInterval(this.interval);
+    }
+
+    if (this.activeDrain) {
+      await this.activeDrain;
     }
   }
 
   async drain(): Promise<void> {
-    if (this.isDraining) {
+    if (this.activeDrain) {
+      return this.activeDrain;
+    }
+
+    if (this.isShuttingDown) {
       return;
     }
 
-    this.isDraining = true;
+    this.activeDrain = this.executeDrain().finally(() => {
+      this.activeDrain = undefined;
+    });
 
-    try {
-      const records = await this.clickEventsOutboxRepository.claimPending(
-        CLICK_EVENT_OUTBOX_BATCH_SIZE,
-      );
+    return this.activeDrain;
+  }
 
-      for (const record of records) {
-        await this.processRecord(record);
-      }
-    } finally {
-      this.isDraining = false;
+  private async executeDrain(): Promise<void> {
+    const records = await this.clickEventsOutboxRepository.claimPending(
+      CLICK_EVENT_OUTBOX_BATCH_SIZE,
+    );
+
+    for (const record of records) {
+      await this.processRecord(record);
     }
   }
 

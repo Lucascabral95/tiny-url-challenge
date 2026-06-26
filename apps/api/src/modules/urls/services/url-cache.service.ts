@@ -5,6 +5,7 @@ import { envs } from '../../../config/env.schema';
 const URL_CACHE_TTL_SECONDS = 86_400;
 const REDIS_CACHE_COMMAND_TIMEOUT_MS = 500;
 const REDIS_CACHE_CIRCUIT_BREAKER_COOLDOWN_MS = 30_000;
+const REDIS_SHUTDOWN_TIMEOUT_MS = 1_000;
 
 @Injectable()
 export class UrlCacheService implements OnModuleDestroy {
@@ -55,8 +56,31 @@ export class UrlCacheService implements OnModuleDestroy {
     }
   }
 
-  onModuleDestroy(): void {
-    this.redis.disconnect();
+  async onModuleDestroy(): Promise<void> {
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+
+    try {
+      const shutdownTimeout = new Promise<never>((_, reject) => {
+        timeout = setTimeout(() => {
+          reject(
+            new Error(
+              `Redis graceful shutdown timed out after ${REDIS_SHUTDOWN_TIMEOUT_MS}ms`,
+            ),
+          );
+        }, REDIS_SHUTDOWN_TIMEOUT_MS);
+      });
+
+      await Promise.race([this.redis.quit(), shutdownTimeout]);
+    } catch (error) {
+      this.logger.warn(
+        `Redis graceful shutdown failed: ${this.formatError(error)}`,
+      );
+      this.redis.disconnect();
+    } finally {
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+    }
   }
 
   private buildKey(code: string): string {

@@ -80,4 +80,44 @@ describe('ClickEventsOutboxProcessor', () => {
       error,
     );
   });
+
+  it('should wait for an active drain before destroying the module', async () => {
+    const clickedAt = new Date('2026-06-11T18:20:15.000Z');
+    let resolveRegisterClick: () => void = () => undefined;
+    const registerClickPromise = new Promise<void>((resolve) => {
+      resolveRegisterClick = resolve;
+    });
+
+    clickEventsOutboxRepository.claimPending.mockResolvedValue([
+      {
+        id: '507f1f77bcf86cd799439011',
+        eventId: 'event-1',
+        code: 'AbC12345',
+        clickedAt,
+        attempts: 1,
+      },
+    ]);
+    clickEventsService.registerClick.mockReturnValue(registerClickPromise);
+
+    const drainPromise = processor.drain();
+    const destroyPromise = processor.onModuleDestroy();
+    let destroyResolved = false;
+
+    void destroyPromise.then(() => {
+      destroyResolved = true;
+    });
+
+    await Promise.resolve();
+    expect(destroyResolved).toBe(false);
+
+    resolveRegisterClick();
+
+    await drainPromise;
+    await destroyPromise;
+
+    expect(destroyResolved).toBe(true);
+    expect(clickEventsOutboxRepository.markProcessed).toHaveBeenCalledWith(
+      '507f1f77bcf86cd799439011',
+    );
+  });
 });
