@@ -56,7 +56,7 @@ GET /api/v1/stats/:code
 - **Redis como cache**: acelera la resolucion de `GET /:code`. MongoDB sigue siendo la fuente de verdad, y Redis se repuebla con TTL cuando hay cache miss.
 - **Fallback de Redis**: si Redis cache falla, la API abre un circuit breaker temporal y resuelve desde MongoDB para no degradar toda la aplicacion por una dependencia de cache.
 - **`url_stats` materializado**: evita calcular estadisticas recorriendo todos los eventos en cada consulta. El worker mantiene este documento actualizado por cada click.
-- **Outbox de eventos**: si falla la publicacion en BullMQ, la API persiste el click en `click_event_outbox`. El worker lo recupera luego de forma idempotente usando `eventId`; si agota reintentos, queda en estado `dead` para inspeccion.
+- **Outbox de eventos**: si falla la publicacion en BullMQ, la API persiste el click en `click_event_outbox`. El worker lo recupera luego de forma idempotente usando `eventId`; si agota reintentos, queda en estado `dead` para inspeccion. Los eventos `processed` se limpian automaticamente por TTL.
 - **Codigos cortos resilientes**: los codigos generados se verifican contra MongoDB y se reintentan ante colisiones. El indice unico sigue siendo la garantia final frente a condiciones de carrera.
 - **Rate limiting**: `POST /api/v1/urls` y `GET /:code` tienen limites por IP para reducir abuso y proteger MongoDB/Redis ante trafico excesivo.
 - **Graceful shutdown**: API y worker escuchan señales de apagado para cerrar recursos. El worker detiene el polling del outbox y espera el drenado activo antes de finalizar.
@@ -65,7 +65,7 @@ GET /api/v1/stats/:code
 
 - `short_urls`: guarda el codigo corto, URL original, alias opcional y timestamps.
 - `click_events`: guarda cada acceso procesado por el worker con codigo, fecha, IP y User-Agent cuando estan disponibles.
-- `click_event_outbox`: guarda clicks pendientes cuando BullMQ no esta disponible o falla la publicacion del evento; los eventos agotados quedan como `dead`.
+- `click_event_outbox`: guarda clicks pendientes cuando BullMQ no esta disponible o falla la publicacion del evento. Los eventos procesados expiran por TTL y los agotados quedan como `dead`.
 - `url_stats`: guarda una vista materializada por codigo con `totalClicks` y `lastClick`.
 
 ## Alcance y trade-offs
@@ -353,7 +353,7 @@ Implementado:
 - Rate limiting por IP en creacion y redireccion de Tiny URLs.
 - Graceful shutdown para API, worker y polling del outbox.
 - Publicacion asincronica de eventos con BullMQ.
-- Outbox persistente con estado `dead` para no perder clicks si falla la publicacion en BullMQ.
+- Outbox persistente con TTL para procesados y estado `dead` para eventos agotados.
 - Worker para persistir `click_events` y actualizar `url_stats`.
 - Endpoint de estadisticas `GET /api/v1/stats/:code`.
 - Frontend Next.js para crear Tiny URLs, abrir enlaces y consultar estadisticas.

@@ -2,6 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
 
 export type ClickEventOutboxDocument = HydratedDocument<ClickEventOutbox>;
+export const PROCESSED_CLICK_EVENT_OUTBOX_TTL_SECONDS = 60 * 60 * 24 * 7;
 
 @Schema({
   collection: 'click_event_outbox',
@@ -58,3 +59,10 @@ ClickEventOutboxSchema.index(
   },
 );
 ClickEventOutboxSchema.index({ status: 1, createdAt: 1 });
+ClickEventOutboxSchema.index(
+  { processedAt: 1 },
+  {
+    expireAfterSeconds: PROCESSED_CLICK_EVENT_OUTBOX_TTL_SECONDS,
+    partialFilterExpression: { status: 'processed' },
+  },
+);
