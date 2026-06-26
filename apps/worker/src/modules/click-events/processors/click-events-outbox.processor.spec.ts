@@ -41,6 +41,7 @@ describe('ClickEventsOutboxProcessor', () => {
         clickedAt,
         ip: '127.0.0.1',
         userAgent: 'jest',
+        attempts: 1,
       },
     ]);
 
@@ -67,6 +68,7 @@ describe('ClickEventsOutboxProcessor', () => {
         eventId: 'event-1',
         code: 'AbC12345',
         clickedAt: new Date('2026-06-11T18:20:15.000Z'),
+        attempts: 1,
       },
     ]);
     clickEventsService.registerClick.mockRejectedValue(error);

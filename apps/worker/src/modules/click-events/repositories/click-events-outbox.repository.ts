@@ -18,6 +18,7 @@ export interface ClickEventOutboxRecord {
   clickedAt: Date;
   ip?: string;
   userAgent?: string;
+  attempts: number;
 }
 
 @Injectable()
@@ -63,6 +64,19 @@ export class ClickEventsOutboxRepository {
   }
 
   async markFailed(id: string, error: unknown): Promise<void> {
+    const outboxEvent = await this.clickEventOutboxModel
+      .findById(id)
+      .select({ attempts: 1 })
+      .exec();
+
+    if (
+      outboxEvent &&
+      outboxEvent.attempts >= CLICK_EVENT_OUTBOX_MAX_ATTEMPTS
+    ) {
+      await this.markDead(id, error);
+      return;
+    }
+
     await this.clickEventOutboxModel
       .updateOne(
         { _id: new Types.ObjectId(id) },
@@ -73,6 +87,22 @@ export class ClickEventsOutboxRepository {
             nextRetryAt: new Date(
               Date.now() + CLICK_EVENT_OUTBOX_RETRY_DELAY_MS,
             ),
+            lastError: this.formatError(error),
+          },
+        },
+      )
+      .exec();
+  }
+
+  private async markDead(id: string, error: unknown): Promise<void> {
+    await this.clickEventOutboxModel
+      .updateOne(
+        { _id: new Types.ObjectId(id) },
+        {
+          $set: {
+            status: 'dead',
+            lockedAt: null,
+            nextRetryAt: null,
             lastError: this.formatError(error),
           },
         },
@@ -119,6 +149,7 @@ export class ClickEventsOutboxRepository {
       clickedAt: document.clickedAt,
       ip: document.ip,
       userAgent: document.userAgent,
+      attempts: document.attempts,
     };
   }
 
