@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { RateLimitGuard } from '../../common/rate-limit/rate-limit.guard';
 import { ClickEventsModule } from '../click-events/click-events.module';
 import { RedirectController } from './controllers/redirect.controller';
 import { UrlsController } from './controllers/urls.controller';
@@ -26,6 +27,7 @@ import { UrlsService } from './services/urls.service';
     UrlStatsRepository,
     ShortCodeGeneratorService,
     UrlCacheService,
+    RateLimitGuard,
   ],
 })
 export class UrlsModule {}

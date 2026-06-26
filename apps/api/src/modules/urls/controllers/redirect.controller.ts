@@ -1,13 +1,25 @@
-import { Controller, Get, HttpStatus, Param, Req, Res } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpStatus,
+  Param,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiFoundResponse,
   ApiNotFoundResponse,
   ApiOperation,
   ApiParam,
+  ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { ErrorResponseDto } from '../../../common/dto/error-response.dto';
+import { RateLimit } from '../../../common/rate-limit/rate-limit.decorator';
+import { RateLimitGuard } from '../../../common/rate-limit/rate-limit.guard';
+import { REDIRECT_RATE_LIMIT } from '../rate-limit.constants';
 import { UrlsService } from '../services/urls.service';
 
 @ApiTags('redirects')
@@ -36,6 +48,13 @@ export class RedirectController {
     description: 'No existe una Tiny URL para el codigo enviado.',
     type: ErrorResponseDto,
   })
+  @ApiResponse({
+    status: 429,
+    description: 'Se excedio el limite de resolucion de Tiny URLs.',
+    type: ErrorResponseDto,
+  })
+  @UseGuards(RateLimitGuard)
+  @RateLimit(REDIRECT_RATE_LIMIT)
   @Get(':code')
   async redirect(
     @Param('code') code: string,

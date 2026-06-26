@@ -58,6 +58,7 @@ GET /api/v1/stats/:code
 - **`url_stats` materializado**: evita calcular estadisticas recorriendo todos los eventos en cada consulta. El worker mantiene este documento actualizado por cada click.
 - **Outbox de eventos**: si falla la publicacion en BullMQ, la API persiste el click en `click_event_outbox`. El worker lo recupera luego de forma idempotente usando `eventId`; si agota reintentos, queda en estado `dead` para inspeccion.
 - **Codigos cortos resilientes**: los codigos generados se verifican contra MongoDB y se reintentan ante colisiones. El indice unico sigue siendo la garantia final frente a condiciones de carrera.
+- **Rate limiting**: `POST /api/v1/urls` y `GET /:code` tienen limites por IP para reducir abuso y proteger MongoDB/Redis ante trafico excesivo.
 
 ## Arquitectura de datos
 
@@ -216,6 +217,8 @@ Swagger documenta los endpoints HTTP de `apps/api`:
 - `GET /:code`
 - `GET /api/v1/stats/:code`
 
+Los endpoints de creacion y redireccion pueden responder `429 Too Many Requests` si se supera el limite por IP.
+
 El worker no tiene Swagger porque no expone endpoints publicos; consume eventos de BullMQ y se documenta en su README.
 
 ## Probar el flujo completo
@@ -346,6 +349,7 @@ Implementado:
 - Estadisticas materializadas en `url_stats`.
 - Resolucion con cache Redis.
 - Circuit breaker para degradar a MongoDB si Redis cache falla.
+- Rate limiting por IP en creacion y redireccion de Tiny URLs.
 - Publicacion asincronica de eventos con BullMQ.
 - Outbox persistente con estado `dead` para no perder clicks si falla la publicacion en BullMQ.
 - Worker para persistir `click_events` y actualizar `url_stats`.

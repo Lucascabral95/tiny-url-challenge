@@ -17,7 +17,7 @@ export class ClickEventsOutboxRepository {
   async createPending(payload: ClickEventPayload): Promise<void> {
     try {
       await this.clickEventOutboxModel.create({
-        eventId: payload.eventId as string,
+        eventId: payload.eventId,
         code: payload.code,
         clickedAt: new Date(payload.clickedAt),
         ip: payload.ip,
