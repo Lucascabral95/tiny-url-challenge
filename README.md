@@ -61,6 +61,7 @@ GET /api/v1/stats/:code
 - **Rate limiting**: `POST /api/v1/urls` y `GET /:code` tienen limites por IP para reducir abuso y proteger MongoDB/Redis ante trafico excesivo.
 - **Validacion anti-SSRF**: la URL original debe ser publica y usar `http/https`. Se bloquean hosts locales, nombres internos y rangos privados o link-local.
 - **Readiness separado de health**: `/health` indica que el proceso vive; `/ready` valida MongoDB para saber si la API puede recibir trafico. Redis cache no bloquea readiness porque puede degradar a MongoDB.
+- **Observabilidad operativa minima**: `GET /api/v1/ops/status` expone contadores de outbox, cola BullMQ y estado del circuit breaker de cache para diagnosticar degradaciones.
 - **Graceful shutdown**: API y worker escuchan señales de apagado para cerrar recursos. El worker detiene el polling del outbox y espera el drenado activo antes de finalizar.
 
 ## Arquitectura de datos
@@ -238,6 +239,7 @@ Swagger documenta los endpoints HTTP de `apps/api`:
 - `POST /api/v1/urls`
 - `GET /:code`
 - `GET /api/v1/stats/:code`
+- `GET /api/v1/ops/status`
 
 Los endpoints de creacion y redireccion pueden responder `429 Too Many Requests` si se supera el limite por IP.
 
@@ -351,6 +353,14 @@ Ejemplo de respuesta:
 }
 ```
 
+Consultar estado operativo:
+
+```txt
+GET /api/v1/ops/status
+```
+
+Devuelve contadores de `click_event_outbox`, jobs de BullMQ y estado del cache Redis.
+
 ## Comandos utiles
 
 ```powershell
@@ -380,6 +390,7 @@ Implementado:
 - Rate limiting por IP en creacion y redireccion de Tiny URLs.
 - Validacion anti-SSRF para bloquear URLs internas o privadas.
 - Readiness endpoint `GET /ready` para validar MongoDB.
+- Endpoint operativo `GET /api/v1/ops/status` para outbox, cola y cache.
 - Graceful shutdown para API, worker y polling del outbox.
 - Publicacion asincronica de eventos con BullMQ.
 - Outbox persistente con TTL para procesados y estado `dead` para eventos agotados.

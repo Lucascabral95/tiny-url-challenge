@@ -78,6 +78,28 @@ describe('UrlCacheService', () => {
     expect(redisClient.set).not.toHaveBeenCalled();
   });
 
+  it('should expose cache status when circuit is closed', () => {
+    expect(service.getStatus()).toEqual({
+      state: 'available',
+      circuitOpen: false,
+      unavailableUntil: null,
+      ttlSeconds: 86400,
+    });
+  });
+
+  it('should expose cache status when circuit is open', async () => {
+    redisClient.get.mockRejectedValue(new Error('redis unavailable'));
+
+    await service.getOriginalUrl('AbC12345');
+
+    expect(service.getStatus()).toEqual({
+      state: 'bypassed',
+      circuitOpen: true,
+      unavailableUntil: new Date(31_000).toISOString(),
+      ttlSeconds: 86400,
+    });
+  });
+
   it('should close Redis gracefully on module destroy', async () => {
     await service.onModuleDestroy();
 

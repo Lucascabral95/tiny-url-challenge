@@ -10,6 +10,7 @@ describe('applyApiPrefixToSwaggerPaths', () => {
         '/urls': {},
         '/{code}': {},
         '/stats/{code}': {},
+        '/ops/status': {},
       },
     } as OpenAPIObject;
 
@@ -21,6 +22,7 @@ describe('applyApiPrefixToSwaggerPaths', () => {
       '/api/v1/urls',
       '/{code}',
       '/api/v1/stats/{code}',
+      '/api/v1/ops/status',
     ]);
   });
 });

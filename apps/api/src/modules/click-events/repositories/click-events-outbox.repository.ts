@@ -7,6 +7,14 @@ import {
   ClickEventOutboxDocument,
 } from '../schemas/click-event-outbox.schema';
 
+export interface ClickEventOutboxStatusCounts {
+  pending: number;
+  processing: number;
+  failed: number;
+  dead: number;
+  processed: number;
+}
+
 @Injectable()
 export class ClickEventsOutboxRepository {
   constructor(
@@ -31,6 +39,28 @@ export class ClickEventsOutboxRepository {
 
       throw error;
     }
+  }
+
+  async countByStatus(): Promise<ClickEventOutboxStatusCounts> {
+    const [pending, processing, failed, dead, processed] = await Promise.all([
+      this.countByStatusValue('pending'),
+      this.countByStatusValue('processing'),
+      this.countByStatusValue('failed'),
+      this.countByStatusValue('dead'),
+      this.countByStatusValue('processed'),
+    ]);
+
+    return {
+      pending,
+      processing,
+      failed,
+      dead,
+      processed,
+    };
+  }
+
+  private async countByStatusValue(status: string): Promise<number> {
+    return this.clickEventOutboxModel.countDocuments({ status }).exec();
   }
 
   private isDuplicateKeyError(error: unknown): boolean {

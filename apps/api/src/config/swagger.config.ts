@@ -8,7 +8,11 @@ import {
 export const SWAGGER_PATH = 'api/docs';
 export const SWAGGER_JSON_PATH = 'api/docs-json';
 
-const VERSIONED_SWAGGER_PATHS = new Set(['/urls', '/stats/{code}']);
+const VERSIONED_SWAGGER_PATHS = new Set([
+  '/urls',
+  '/stats/{code}',
+  '/ops/status',
+]);
 
 export function setupSwagger(app: INestApplication, apiPrefix: string): void {
   const config = new DocumentBuilder()

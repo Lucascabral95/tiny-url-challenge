@@ -29,5 +29,6 @@ import { UrlsService } from './services/urls.service';
     UrlCacheService,
     RateLimitGuard,
   ],
+  exports: [UrlCacheService],
 })
 export class UrlsModule {}

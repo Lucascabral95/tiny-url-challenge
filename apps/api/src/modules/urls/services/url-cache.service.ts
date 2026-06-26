@@ -7,6 +7,13 @@ const REDIS_CACHE_COMMAND_TIMEOUT_MS = 500;
 const REDIS_CACHE_CIRCUIT_BREAKER_COOLDOWN_MS = 30_000;
 const REDIS_SHUTDOWN_TIMEOUT_MS = 1_000;
 
+export interface UrlCacheStatus {
+  state: 'available' | 'bypassed';
+  circuitOpen: boolean;
+  unavailableUntil: string | null;
+  ttlSeconds: number;
+}
+
 @Injectable()
 export class UrlCacheService implements OnModuleDestroy {
   private readonly logger = new Logger(UrlCacheService.name);
@@ -54,6 +61,19 @@ export class UrlCacheService implements OnModuleDestroy {
     } catch (error) {
       this.openCircuit('write', error);
     }
+  }
+
+  getStatus(): UrlCacheStatus {
+    const circuitOpen = this.isCircuitOpen();
+
+    return {
+      state: circuitOpen ? 'bypassed' : 'available',
+      circuitOpen,
+      unavailableUntil: circuitOpen
+        ? new Date(this.unavailableUntil).toISOString()
+        : null,
+      ttlSeconds: URL_CACHE_TTL_SECONDS,
+    };
   }
 
   async onModuleDestroy(): Promise<void> {
