@@ -64,6 +64,21 @@ GET /api/v1/stats/:code
 - **Observabilidad operativa minima**: `GET /api/v1/ops/status` expone contadores de outbox, cola BullMQ y estado del circuit breaker de cache para diagnosticar degradaciones.
 - **Graceful shutdown**: API y worker escuchan señales de apagado para cerrar recursos. El worker detiene el polling del outbox y espera el drenado activo antes de finalizar.
 
+## Mejoras incorporadas despues del feedback
+
+Estas mejoras no eran estrictamente requeridas por el enunciado original, pero se incorporaron para reforzar resiliencia, operabilidad y seguridad.
+
+- **Colisiones de short code**: se agrego retry y verificacion previa contra MongoDB antes de crear codigos generados automaticamente. El indice unico sigue siendo la barrera final ante condiciones de carrera.
+- **Fallback de Redis cache**: si Redis falla durante la resolucion, la API abre un circuit breaker temporal y continua resolviendo desde MongoDB.
+- **Outbox persistente para eventos**: si BullMQ o Redis no aceptan el evento de click, la API lo guarda en `click_event_outbox` para que el worker lo procese despues.
+- **Estado `dead` para eventos agotados**: los eventos del outbox que superan el maximo de reintentos quedan marcados como `dead`, en lugar de perderse silenciosamente.
+- **TTL para outbox procesado**: los eventos ya procesados se eliminan automaticamente despues del periodo de retencion definido, evitando crecimiento indefinido de la coleccion.
+- **Rate limiting**: se agregaron limites por IP en `POST /api/v1/urls` y `GET /:code` para reducir abuso y proteger dependencias.
+- **Validacion anti-SSRF**: la URL original debe ser publica y usar `http/https`; se bloquean destinos locales, internos o privados.
+- **Readiness separado de health**: `GET /ready` valida MongoDB para distinguir entre “el proceso vive” y “la API esta lista para recibir trafico”.
+- **Endpoint operativo**: `GET /api/v1/ops/status` expone contadores de outbox, cola y estado del cache para diagnostico rapido.
+- **Graceful shutdown**: API y worker manejan mejor las señales de apagado para cerrar recursos y evitar cortar trabajo activo innecesariamente.
+
 ## Arquitectura de datos
 
 - `short_urls`: guarda el codigo corto, URL original, alias opcional y timestamps.
